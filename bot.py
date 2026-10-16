@@ -2,6 +2,8 @@
 # Telegram bot: send a photo of a QR code / barcode.
 #   - If the product is known    -> the bot replies with its name and price.
 #   - If the product is unknown  -> the bot asks for "name, price" and saves it.
+# Generated
+#  with Claude (Anthropic), then edited by me
 
 import os
 
