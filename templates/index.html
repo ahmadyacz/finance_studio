@@ -1,0 +1,204 @@
+{% extends "layout.html" %}
+
+{% block title %}Overview · Finance Studio{% endblock %}
+
+{% block content %}
+
+{# ---------- Period filter (above "Total spent") ---------- #}
+<section class="stack">
+
+    <input class="custom-check" type="checkbox" id="custom-toggle"
+           {% if period|default('month') == 'custom' %}checked{% endif %}>
+
+    <div class="segmented" role="group" aria-label="Time period">
+        <a class="segmented__item {% if period|default('month') == 'month' %}is-active{% endif %}"
+           href="?period=month">This month</a>
+
+        <a class="segmented__item {% if period|default('month') == 'week' %}is-active{% endif %}"
+           href="?period=week">This week</a>
+
+        <label class="segmented__item segmented__item--custom" for="custom-toggle">Custom</label>
+    </div>
+
+    {# Custom range: from date → to date #}
+    <form class="card card--flat range" method="get" action="">
+        <input type="hidden" name="period" value="custom">
+
+        <div class="field">
+            <label class="label" for="date-from">From</label>
+            <input class="input" type="date" id="date-from" name="from" value="{{ date_from|default('') }}" required>
+        </div>
+
+        <div class="field">
+            <label class="label" for="date-to">To</label>
+            <input class="input" type="date" id="date-to" name="to" value="{{ date_to|default('') }}" required>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Apply range</button>
+    </form>
+</section>
+
+{# ---------- Two main titles ---------- #}
+<section class="stats">
+    <article class="card card--accent stat">
+        <h2 class="stat__title">Total spent</h2>
+        <p class="stat__value">
+            <span class="stat__currency">{{ currency|default('$') }}</span>{{ '{:,.2f}'.format(total_spent|default(0)) }}
+        </p>
+        <p class="stat__note">{{ period_label|default('This month') }}</p>
+    </article>
+
+    <article class="card stat">
+        <h2 class="stat__title">Current cash</h2>
+        <p class="stat__value">
+            <span class="stat__currency">{{ currency|default('$') }}</span>{{ '{:,.2f}'.format(current_cash|default(0)) }}
+        </p>
+        <p class="stat__note">Available now</p>
+    </article>
+</section>
+
+{# ---------- Actions ---------- #}
+<section class="actions">
+    <button type="button" class="btn btn-primary btn-lg" id="add-money-btn">Add money</button>
+    <button type="button" class="btn btn-secondary btn-lg" id="add-purchase-btn">Add purchase</button>
+</section>
+
+{# ---------- History ---------- #}
+<section class="stack">
+    <h2 class="h2">History</h2>
+
+    <div class="card card--flat">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history|default([]) %}
+                <tr>
+                    <td>{{ item.date }}</td>
+                    <td>
+                        {% if item.type == 'income' %}
+                        <span class="badge badge--positive">Money added</span>
+                        {% else %}
+                        <span class="badge badge--negative">Purchase</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.description }}</td>
+                    <td class="{% if item.type == 'income' %}text-positive{% else %}text-negative{% endif %}">
+                        {{ '+' if item.type == 'income' else '-' }}{{ currency|default('$') }}{{ '{:,.2f}'.format(item.amount) }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-muted">No history yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{# ---------- Add money dialog ---------- #}
+<dialog class="modal" id="add-money-dialog" aria-labelledby="add-money-title">
+    <form class="form" method="post" action="/">
+        <h2 class="h2" id="add-money-title">Add money</h2>
+
+        <div class="field">
+            <label class="label" for="money-amount">Amount</label>
+            <div class="input-group">
+                <span class="input-group__prefix">{{ currency|default('$') }}</span>
+                <input class="input-group__input" type="number" id="money-amount" name="added_amount"
+                       min="0.01" step="0.01" placeholder="0.00" required>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="label" for="money-description">Description</label>
+            <textarea class="textarea" id="money-description" name="description" rows="3"
+                      placeholder="e.g. Salary, gift..."></textarea>
+        </div>
+
+        <div class="modal__actions">
+            <button type="button" class="btn btn-ghost" id="add-money-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add money</button>
+        </div>
+    </form>
+</dialog>
+
+{# ---------- Add purchase dialog ---------- #}
+<dialog class="modal" id="add-purchase-dialog" aria-labelledby="add-purchase-title">
+    <form class="form" method="post" action="/">
+        <h2 class="h2" id="add-purchase-title">Add purchase</h2>
+
+        <div class="field">
+            <label class="label" for="purchase-name">Product name</label>
+            <input class="input" type="text" id="purchase-name" name="product_name"
+                   placeholder="e.g. Coffee beans" required>
+        </div>
+
+        <div class="field">
+            <label class="label" for="purchase-price">Price</label>
+            <div class="input-group">
+                <span class="input-group__prefix">{{ currency|default('$') }}</span>
+                <input class="input-group__input" type="number" id="purchase-price" name="price"
+                       min="0.01" step="0.01" placeholder="0.00" required>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="label" for="purchase-category">Category</label>
+            <input class="input" type="text" id="purchase-category" name="category"
+                   placeholder="e.g. Food" required>
+        </div>
+
+        <div class="field">
+            <label class="label" for="purchase-symbol">Symbol</label>
+            <input class="input" type="text" id="purchase-symbol" name="symbol"
+                   placeholder="e.g. COFFEE" required>
+            <span class="field__hint">A unique short name for this product.</span>
+        </div>
+
+        <div class="modal__actions">
+            <button type="button" class="btn btn-ghost" id="add-purchase-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add purchase</button>
+        </div>
+    </form>
+</dialog>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const addMoneyDialog = document.getElementById('add-money-dialog');
+
+    document.getElementById('add-money-btn').addEventListener('click', () => {
+        addMoneyDialog.showModal();
+        document.getElementById('money-amount').focus();
+    });
+
+    document.getElementById('add-money-cancel').addEventListener('click', () => addMoneyDialog.close());
+
+    // Click on the backdrop closes the dialog
+    addMoneyDialog.addEventListener('click', (e) => {
+        if (e.target === addMoneyDialog) addMoneyDialog.close();
+    });
+
+    const addPurchaseDialog = document.getElementById('add-purchase-dialog');
+
+    document.getElementById('add-purchase-btn').addEventListener('click', () => {
+        addPurchaseDialog.showModal();
+        document.getElementById('purchase-name').focus();
+    });
+
+    document.getElementById('add-purchase-cancel').addEventListener('click', () => addPurchaseDialog.close());
+
+    addPurchaseDialog.addEventListener('click', (e) => {
+        if (e.target === addPurchaseDialog) addPurchaseDialog.close();
+    });
+</script>
+{% endblock %}
