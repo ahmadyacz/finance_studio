@@ -19,8 +19,6 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-if TOKEN is None:
-    raise ValueError("TELEGRAM_TOKEN not set")
 
 # Same database file as app.py, no matter where the bot is started from
 DATABASE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "finance.db")
@@ -175,6 +173,8 @@ async def handle_text(update, context):
 # =========================================================
 
 def main():
+    if TOKEN is None:
+        raise ValueError("TELEGRAM_TOKEN not set")
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))

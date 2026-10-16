@@ -129,7 +129,7 @@ def index():
     
     
     # Rendering the index page
-    return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=history)
+    return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
