@@ -55,7 +55,7 @@ def index():
         render_date["end"] = request.args.get("to")
         if not render_date["start"] or not render_date["end"]:
             return redirect("/")
-    ahistory = db.execute("SELECT * FROM ahistory WHERE ? < date < ?", render_date["start"], render_date["end"])
+    ahistory = db.execute("SELECT * FROM phistory WHERE ? < date < ?", render_date["start"], render_date["end"])
 
     
     if request.method == "POST":
@@ -66,11 +66,40 @@ def index():
             db.execute("UPDATE user SET cash = cash + ? WHERE name = ?", float(added_amount), user_info[0]["name"])
             return redirect("/")
         # -------------------------------------------------------
+        # Add a purchase
+        product_name = request.form.get("product_name")
+        price = request.form.get("price")
+        if price is None:
+            return redirect("/")
+        category = request.form.get("category")
+        symbol = request.form.get("symbol")
+        items = db.execute("SELECT * FROM items")
+        item_found = False
+        product = {}
+        for item in items:
+            if item["symbol"] == symbol and ( item["price"] == round(float(price)) or round(float(price)) == 0 ):
+                item_found = True
+                product = item
+                break
+            elif item["symbol"] == symbol and item["price"] != round(float(price)):
+                db.execute("UPDATE items SET price = ? WHERE symbol = ?", round(float(price)), symbol)
+                item_found = True
+                product = item
+                break
+        if item_found:
+            db.execute("INSERT INTO phistory (name, amount, category, symbol) VALUES (?, ?, ?, ?)", product["name"], product["price"], product["category"], symbol)
+            db.execute("UPDATE user SET cash = cash - ? WHERE name = ?", product["price"], user_info[0]["name"])
+        elif not item_found and product_name and category and symbol:
+            db.execute("INSERT INTO items (name, price, category, symbol) VALUES (?, ?, ?, ?)", product_name, int(price), category.lower(), symbol)
+            db.execute("INSERT INTO phistory (name, amount, category, symbol) VALUES (?, ?, ?, ?)", product_name, int(price), category.lower(), symbol)
+            db.execute("UPDATE user SET cash = cash - ? WHERE name = ?", product["price"], user_info[0]["name"])
+        return redirect("/")
+        # -------------------------------------------------------
     
 
-    # Add a purchase
     
-    # -------------------------------------------------------
+    
+    
     
     # Rendering the index page
     return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=ahistory)
