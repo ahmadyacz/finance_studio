@@ -471,6 +471,45 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
     to   { opacity: 1; transform: none; }
 }
 
+/* ---------- Expandable history rows ---------- */
+.table__toggle-col { width: 48px; text-align: right; }
+.row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background-color .2s, color .2s;
+}
+.row-toggle:hover { background: var(--accent-tint); color: var(--accent); }
+.row-toggle svg { transition: transform .3s var(--ease-out); }
+.row-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.row-toggle[aria-expanded="true"] { color: var(--accent); }
+
+.table tbody tr.row-details:hover { background: transparent; }
+.row-details td { background: var(--bg); }
+.details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+}
+.details dt { font-size: .8125rem; font-weight: 600; color: var(--ink-soft); }
+.details dd { margin: 2px 0 0; font-weight: 500; }
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
 /* ---------- Respect reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

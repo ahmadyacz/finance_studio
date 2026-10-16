@@ -1,3 +1,4 @@
+from platform import python_revision
 import re
 
 from cs50 import SQL
@@ -37,6 +38,12 @@ def get_timestamp(period, boundary):
         return start.timestamp()
     return (next_start - timedelta(microseconds=1)).timestamp()
 
+# maded by help of AI
+def merge_history(var1, var2):
+    merged = [dict(item, type="purchase") for item in var1]
+    merged.extend(dict(item, type="add") for item in var2)
+    return sorted(merged, key=lambda item: item["date"], reverse=True)
+
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -47,15 +54,29 @@ def index():
     user_info = db.execute("SELECT * FROM user")
     if not user_info:
         return redirect("/register")
-    if request.args.get("period") == "week":
-        render_date["start"] = get_timestamp("week", "start")
-        render_date["end"] = get_timestamp("week", "end")
-    elif request.args.get("period") == "custom":
-        render_date["start"] = request.args.get("from")
-        render_date["end"] = request.args.get("to")
-        if not render_date["start"] or not render_date["end"]:
-            return redirect("/")
-    ahistory = db.execute("SELECT * FROM phistory WHERE ? < date < ?", render_date["start"], render_date["end"])
+
+    
+    if request.method == "GET":
+        if request.args.get("period") == "week":
+            render_date["start"] = get_timestamp("week", "start")
+            render_date["end"] = get_timestamp("week", "end")
+        elif request.args.get("period") == "custom":
+            render_date["start"] = request.args.get("from")
+            render_date["end"] = request.args.get("to")
+            if not render_date["start"] or not render_date["end"]:
+                return redirect("/")
+        if not request.args.get("period"):
+            period_label = "month"
+        else:
+            period_label = request.args.get("period")
+        
+        total_spent = 0
+        ahistory = db.execute("SELECT * FROM ahistory WHERE unixepoch(date) >= ? AND unixepoch(date) < ?", render_date["start"], render_date["end"])
+        phistory = db.execute("SELECT * FROM phistory WHERE unixepoch(date) >= ? AND unixepoch(date) < ?", render_date["start"], render_date["end"])
+        for purchase in phistory:
+            total_spent += purchase["amount"]
+        history = merge_history(phistory, ahistory)
+        return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=history, period_label=period_label, total_spent=total_spent)
 
     
     if request.method == "POST":
@@ -92,7 +113,7 @@ def index():
         elif not item_found and product_name and category and symbol:
             db.execute("INSERT INTO items (name, price, category, symbol) VALUES (?, ?, ?, ?)", product_name, int(price), category.lower(), symbol)
             db.execute("INSERT INTO phistory (name, amount, category, symbol) VALUES (?, ?, ?, ?)", product_name, int(price), category.lower(), symbol)
-            db.execute("UPDATE user SET cash = cash - ? WHERE name = ?", product["price"], user_info[0]["name"])
+            db.execute("UPDATE user SET cash = cash - ? WHERE name = ?", int(price), user_info[0]["name"])
         return redirect("/")
         # -------------------------------------------------------
     
@@ -102,7 +123,7 @@ def index():
     
     
     # Rendering the index page
-    return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=ahistory)
+    return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=history)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():

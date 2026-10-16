@@ -75,6 +75,7 @@
                     <th>Type</th>
                     <th>Description</th>
                     <th>Amount</th>
+                    <th class="table__toggle-col"><span class="sr-only">Details</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -82,20 +83,43 @@
                 <tr>
                     <td>{{ item.date }}</td>
                     <td>
-                        {% if item.type == 'income' %}
+                        {% if item.type == "add" %}
                         <span class="badge badge--positive">Money added</span>
                         {% else %}
                         <span class="badge badge--negative">Purchase</span>
                         {% endif %}
                     </td>
-                    <td>{{ item.description }}</td>
-                    <td class="{% if item.type == 'income' %}text-positive{% else %}text-negative{% endif %}">
-                        {{ '+' if item.type == 'income' else '-' }}{{ currency|default('$') }}{{ '{:,.2f}'.format(item.amount) }}
+                    <td>{{ item.description|default('No description') }}</td>
+                    <td class="{% if item.type == 'add' %}text-positive{% else %}text-negative{% endif %}">
+                        {{ '+' if item.type == 'add' else '-' }}{{ currency|default('$') }}{{ '{:,.2f}'.format(item.amount) }}
+                    </td>
+                    <td class="table__toggle-col">
+                        {% if item.type == 'purchase' %}
+                        <button type="button" class="row-toggle" aria-expanded="false"
+                                aria-controls="details-{{ loop.index }}" aria-label="Show details">
+                            <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 8l5 5 5-5"/>
+                            </svg>
+                        </button>
+                        {% endif %}
                     </td>
                 </tr>
+                {% if item.type == 'purchase' %}
+                <tr class="row-details is-hidden" id="details-{{ loop.index }}">
+                    <td colspan="5">
+                        <dl class="details">
+                            <div><dt>Product</dt><dd>{{ item.name|default('—') }}</dd></div>
+                            <div><dt>Symbol</dt><dd>{{ item.symbol|default('—') }}</dd></div>
+                            <div><dt>Category</dt><dd>{{ item.category|default('—') }}</dd></div>
+                            <div><dt>Price</dt><dd>{{ currency|default('$') }}{{ '{:,.2f}'.format(item.amount) }}</dd></div>
+                        </dl>
+                    </td>
+                </tr>
+                {% endif %}
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-muted">No history yet.</td>
+                    <td colspan="5" class="text-muted">No history yet.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -186,6 +210,16 @@
     // Click on the backdrop closes the dialog
     addMoneyDialog.addEventListener('click', (e) => {
         if (e.target === addMoneyDialog) addMoneyDialog.close();
+    });
+
+    // Expand / collapse purchase details in the history table
+    document.querySelectorAll('.row-toggle').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const open = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', String(!open));
+            btn.setAttribute('aria-label', open ? 'Show details' : 'Hide details');
+            document.getElementById(btn.getAttribute('aria-controls')).classList.toggle('is-hidden', open);
+        });
     });
 
     const addPurchaseDialog = document.getElementById('add-purchase-dialog');
