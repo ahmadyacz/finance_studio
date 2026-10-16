@@ -371,6 +371,31 @@ a:hover { text-decoration: underline; }
     to   { transform: scale(1); }
 }
 
+/* ---------- Sliding blue pill (enabled by JS via .has-thumb) ---------- */
+.segmented { position: relative; }
+.segmented__thumb {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    height: calc(100% - 8px);
+    width: 0;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    pointer-events: none;
+    transition: transform .45s var(--ease-out), width .45s var(--ease-out);
+}
+.segmented.has-thumb .segmented__item { position: relative; z-index: 1; }
+.segmented.has-thumb .segmented__item.is-active,
+.custom-check:checked ~ .segmented.has-thumb .segmented__item--custom {
+    background: transparent;
+    color: var(--ink-soft);
+    animation: none;
+}
+.segmented.has-thumb .segmented__item.is-selected,
+.custom-check:checked ~ .segmented.has-thumb .segmented__item--custom.is-selected {
+    color: #fff;
+}
+
 /* ---------- Custom range panel opens with a slide ---------- */
 .custom-check:checked ~ .range {
     animation: slide-down .4s var(--ease-out);
@@ -509,6 +534,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
     clip: rect(0 0 0 0);
     white-space: nowrap;
 }
+
+/* Content swapped in the background must not replay entrance animations */
+.no-anim, .no-anim * { animation: none !important; }
 
 /* ---------- Respect reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

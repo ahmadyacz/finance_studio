@@ -76,7 +76,7 @@ def index():
         for purchase in phistory:
             total_spent += purchase["amount"]
         history = merge_history(phistory, ahistory)
-        return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=history, period_label=period_label, total_spent=total_spent)
+        return render_template("index.html", current_cash=user_info[0]["cash"], currency=CURRENCY, history=history, period=period_label, period_label=period_label, total_spent=total_spent)
 
     
     if request.method == "POST":
@@ -133,5 +133,5 @@ def register():
     if request.method == "GET":
         return render_template("register.html")
     if request.form.get("name") and request.form.get("amount"):
-        db.execute("INSERT INTO user (name, cash) VALUES (?, ?)", request.form.get("name"), request.form.get("amount"), currency=CURRENCY)
+        db.execute("INSERT INTO user (name, cash) VALUES (?, ?)", request.form.get("name"), request.form.get("amount"))
     return redirect("/")

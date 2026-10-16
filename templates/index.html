@@ -39,7 +39,7 @@
 </section>
 
 {# ---------- Two main titles ---------- #}
-<section class="stats">
+<section class="stats" id="stats-section">
     <article class="card card--accent stat">
         <h2 class="stat__title">Total spent</h2>
         <p class="stat__value">
@@ -64,7 +64,7 @@
 </section>
 
 {# ---------- History ---------- #}
-<section class="stack">
+<section class="stack" id="history-section">
     <h2 class="h2">History</h2>
 
     <div class="card card--flat">
@@ -212,14 +212,107 @@
         if (e.target === addMoneyDialog) addMoneyDialog.close();
     });
 
-    // Expand / collapse purchase details in the history table
-    document.querySelectorAll('.row-toggle').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const open = btn.getAttribute('aria-expanded') === 'true';
-            btn.setAttribute('aria-expanded', String(!open));
-            btn.setAttribute('aria-label', open ? 'Show details' : 'Hide details');
-            document.getElementById(btn.getAttribute('aria-controls')).classList.toggle('is-hidden', open);
+    // Sliding pill for This month / This week / Custom
+    (() => {
+        const seg = document.querySelector('.segmented');
+        const check = document.getElementById('custom-toggle');
+        const items = Array.from(seg.querySelectorAll('.segmented__item'));
+        const customItem = seg.querySelector('.segmented__item--custom');
+        let activeLink = items.find((i) => i.classList.contains('is-active')) || items[0];
+
+        const thumb = document.createElement('span');
+        thumb.className = 'segmented__thumb';
+        seg.prepend(thumb);
+        seg.classList.add('has-thumb');
+
+        let selected = check.checked ? customItem : activeLink;
+
+        function place(item) {
+            selected = item;
+            thumb.style.width = item.offsetWidth + 'px';
+            thumb.style.transform = 'translateX(' + item.offsetLeft + 'px)';
+            items.forEach((i) => i.classList.toggle('is-selected', i === item));
+        }
+        function placeInstantly(item) {
+            thumb.style.transition = 'none';
+            place(item);
+            thumb.offsetWidth; // force reflow
+            thumb.style.transition = '';
+        }
+
+        placeInstantly(selected);
+
+        window.addEventListener('load', () => placeInstantly(selected));
+        window.addEventListener('resize', () => placeInstantly(selected));
+
+        // Custom is a checkbox: slide without reloading
+        check.addEventListener('change', () => place(check.checked ? customItem : activeLink));
+
+        // Month / week are links: slide, then refresh the data in the background
+        items.filter((i) => i.tagName === 'A').forEach((link) => {
+            link.addEventListener('click', (e) => {
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                check.checked = false;
+                activeLink = link;
+                place(link);
+                history.pushState(null, '', link.href);
+                refreshData(link.href);
+            });
         });
+
+        // Custom range form: apply in the background
+        document.querySelector('form.range').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const url = '?' + new URLSearchParams(new FormData(form)).toString();
+            history.pushState(null, '', url);
+            refreshData(url);
+        });
+    })();
+
+    // Re-fetch the page and swap only the data sections (no reload, no entrance animations)
+    async function refreshData(url) {
+        try {
+            const res = await fetch(url);
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const ids = ['stats-section', 'history-section'];
+            if (!ids.every((id) => doc.getElementById(id))) {
+                window.location.href = url; // e.g. redirected to /register
+                return;
+            }
+            ids.forEach((id) => {
+                const fresh = doc.getElementById(id);
+                fresh.classList.add('no-anim');
+                document.getElementById(id).replaceWith(fresh);
+            });
+        } catch (err) {
+            window.location.href = url;
+        }
+    }
+
+    window.addEventListener('popstate', () => refreshData(window.location.href));
+
+    // Add money / Add purchase: submit in the background, then refresh the data
+    [addMoneyDialog, document.getElementById('add-purchase-dialog')].forEach((dialog) => {
+        const form = dialog.querySelector('form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch(form.action, { method: 'POST', body: new URLSearchParams(new FormData(form)) });
+            dialog.close();
+            form.reset();
+            await refreshData(window.location.href);
+        });
+    });
+
+    // Expand / collapse purchase details in the history table
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.row-toggle');
+        if (!btn) return;
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!open));
+        btn.setAttribute('aria-label', open ? 'Show details' : 'Hide details');
+        document.getElementById(btn.getAttribute('aria-controls')).classList.toggle('is-hidden', open);
     });
 
     const addPurchaseDialog = document.getElementById('add-purchase-dialog');
