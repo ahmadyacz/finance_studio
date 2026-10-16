@@ -61,9 +61,15 @@ def index():
             render_date["start"] = get_timestamp("week", "start")
             render_date["end"] = get_timestamp("week", "end")
         elif request.args.get("period") == "custom":
-            render_date["start"] = request.args.get("from")
-            render_date["end"] = request.args.get("to")
-            if not render_date["start"] or not render_date["end"]:
+            date_from = request.args.get("from")
+            date_to = request.args.get("to")
+            if not date_from or not date_to:
+                return redirect("/")
+            try:
+                # "to" is inclusive, so the range ends at the start of the next day
+                render_date["start"] = datetime.strptime(date_from, "%Y-%m-%d").timestamp()
+                render_date["end"] = (datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)).timestamp()
+            except ValueError:
                 return redirect("/")
         if not request.args.get("period"):
             period_label = "month"
@@ -105,7 +111,7 @@ def index():
             elif item["symbol"] == symbol and item["price"] != round(float(price)):
                 db.execute("UPDATE items SET price = ? WHERE symbol = ?", round(float(price)), symbol)
                 item_found = True
-                product = item
+                product = dict(item, price=round(float(price)))
                 break
         if item_found:
             db.execute("INSERT INTO phistory (name, amount, category, symbol) VALUES (?, ?, ?, ?)", product["name"], product["price"], product["category"], symbol)
